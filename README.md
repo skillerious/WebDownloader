@@ -25,16 +25,10 @@
 ## 📸 **Screenshots**
 
 ### **1. Home Interface**
-![Home Interface](https://i.imgur.com/HomeScreenshot.png)
+![Home Interface](https://github.com/skillerious/WebDownloader/blob/main/icons/uploads/Screenshot%202024-12-01%20001800.png)
 
 ### **2. Settings Page**
-![Settings Page](https://i.imgur.com/SettingsScreenshot.png)
-
-### **3. Download History**
-![Download History](https://i.imgur.com/HistoryScreenshot.png)
-
-### **4. About Page**
-![About Page](https://i.imgur.com/AboutScreenshot.png)
+![Settings Page](https://github.com/skillerious/WebDownloader/blob/main/icons/uploads/Screenshot%202024-12-01%20001816.png)
 
 ---
 
