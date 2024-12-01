@@ -1,7 +1,7 @@
 
 # 🌐 Web Downloader - Your Ultimate Website Downloading Tool 🚀
 
-![Web Downloader Logo](https://i.imgur.com/YourLogo.png) <!-- Replace with your actual logo URL -->
+![Web Downloader Logo](https://github.com/skillerious/WebDownloader/blob/main/icons/app_icon.png) <!-- Replace with your actual logo URL -->
 
 **Web Downloader** is a powerful and user-friendly application built with Python and PyQt5, designed to help you effortlessly download entire websites, including their HTML, CSS, JavaScript, images, SVGs, videos, and documents. Whether you're archiving your favorite sites, working offline, or analyzing website structures, Web Downloader has got you covered!
 
