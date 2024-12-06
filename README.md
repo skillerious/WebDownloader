@@ -44,7 +44,7 @@
 1. **Clone the Repository**
    
    ```bash
-   git clone https://github.com/YourUsername/WebDownloader.git
+   git clone https://github.com/skillerious/WebDownloader.git
    cd WebDownloader
    ```
 
