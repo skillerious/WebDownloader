@@ -28,7 +28,7 @@
 ![Home Interface](https://github.com/skillerious/WebDownloader/blob/main/icons/uploads/Screenshot%202024-12-01%20001800.png)
 
 ### **2. Settings Page**
-![Settings Page](https://github.com/skillerious/WebDownloader/blob/main/icons/uploads/Screenshot%202024-12-01%20001816.png)
+![Settings Page](https://github.com/skillerious/WebDownloader/blob/main/icons/uploads/HomePage.png)
 
 ---
 
