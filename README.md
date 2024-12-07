@@ -206,7 +206,7 @@ This project is licensed under the [MIT License](https://opensource.org/licenses
 If you encounter any issues or have questions about Web Downloader, feel free to reach out:
 
 - **Email:** robin.doak87@gmail.com
-- **GitHub Issues:** [Open an Issue](https://github.com/YourUsername/WebDownloader/issues)
+- **GitHub Issues:** [Open an Issue](https://github.com/skillerious/WebDownloader/issues)
 
 ---
 
