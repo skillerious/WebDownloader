@@ -25,10 +25,10 @@
 ## 📸 **Screenshots**
 
 ### **1. Home Interface**
-![Home Interface](https://github.com/skillerious/WebDownloader/blob/main/icons/uploads/Screenshot%202024-12-01%20001800.png)
+![Home Interface](https://github.com/skillerious/WebDownloader/blob/main/icons/uploads/HomePage.png)
 
 ### **2. Settings Page**
-![Settings Page](https://github.com/skillerious/WebDownloader/blob/main/icons/uploads/HomePage.png)
+![Settings Page](https://github.com/skillerious/WebDownloader/blob/main/icons/uploads/Screenshot%202024-12-01%20001800.png)
 
 ---
 
