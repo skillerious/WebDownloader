@@ -16,7 +16,7 @@ from PyQt5.QtWidgets import (
     QStackedWidget, QFormLayout, QComboBox, QFrame, QCheckBox, QSpinBox,
     QDoubleSpinBox, QSizePolicy, QGraphicsOpacityEffect, QScrollArea,
     QTabWidget, QGroupBox, QGridLayout, QTableWidget, QTableWidgetItem, QHeaderView,
-    QTimeEdit
+    QTimeEdit, QGraphicsDropShadowEffect, QSlider, QSpacerItem, QSizePolicy
 )
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QPropertyAnimation, QEasingCurve, QPoint, QSize, QTimer, QTime, QUrl
 from PyQt5.QtGui import QIcon, QFont, QPixmap, QColor, QPalette, QBrush
@@ -964,6 +964,10 @@ class TitleBar(QWidget):
 
     def mouseReleaseEvent(self, event):
         self.pressing = False
+
+    def mouseDoubleClickEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.maximize_restore_window()
 
 # ------------------------ Home Widget ------------------------
 class HomeWidget(QWidget):
@@ -2244,25 +2248,47 @@ class AboutWidget(QWidget):
         self.init_ui()
 
     def init_ui(self):
-        about_text = QTextEdit()
-        about_text.setReadOnly(True)
-        about_text.setHtml("""
-            <h2>Web Downloader</h2>
-            <p><strong>Version 3.1</strong></p>
-            <p>Developed with Python and PyQt5.</p>
-            <p>Enhanced with improved sidebar appearance, logging display, and additional features.</p>
-            <p>Developed by Robin Doak.</p>
-            <p>Icons by <a href="https://www.flaticon.com/authors/freepik" target="_blank">Freepik</a> from <a href="https://www.flaticon.com/" target="_blank">Flaticon</a></p>
-            <p>Special thanks to the open-source community for providing invaluable tools and libraries.</p>
-        """)
-        about_text.setFont(QFont("Segoe UI", 12))
-        about_text.setStyleSheet("""
-            QTextEdit {
-                background-color: #3c3c3c;
-                border: none;
-                border-radius: 0px;
-                padding: 10px;
+        main_layout = QVBoxLayout()
+        main_layout.setContentsMargins(40, 40, 40, 40)
+        main_layout.setSpacing(20)
+
+        # Title area
+        title_layout = QHBoxLayout()
+        title_layout.setSpacing(10)
+
+        icon_label = QLabel()
+        icon_pixmap = QPixmap("icons/app_icon.png").scaled(48, 48, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        icon_label.setPixmap(icon_pixmap)
+
+        title_label = QLabel("About Web Downloader")
+        title_label.setStyleSheet("""
+            QLabel {
+                font-size: 24px;
+                font-weight: bold;
                 color: #ffffff;
+            }
+        """)
+
+        title_layout.addWidget(icon_label, 0, Qt.AlignCenter)
+        title_layout.addWidget(title_label, 0, Qt.AlignCenter | Qt.AlignVCenter)
+        title_layout.addStretch()
+
+        # Divider line
+        divider = QFrame()
+        divider.setFrameShape(QFrame.HLine)
+        divider.setFrameShadow(QFrame.Sunken)
+        divider.setStyleSheet("border: 1px solid #555555;")
+
+        # About content label
+        about_label = QLabel()
+        about_label.setWordWrap(True)
+        about_label.setAlignment(Qt.AlignTop)
+        about_label.setStyleSheet("""
+            QLabel {
+                color: #ffffff;
+                background-color: #3c3c3c;
+                font-family: "Segoe UI";
+                font-size: 14px;
             }
             a {
                 color: #1e90ff;
@@ -2272,13 +2298,71 @@ class AboutWidget(QWidget):
                 text-decoration: underline;
             }
         """)
+        about_label.setText("""
+            <h2 style="margin-bottom:5px;">Version 3.1</h2>
+            <p><b>Developed with Python and PyQt5.</b></p>
+            <p>This application allows you to download entire websites for offline use, handling HTML pages, images, CSS, JS, fonts, and more. It provides an intuitive interface, customizable settings, and detailed logs to help you manage and monitor your downloads efficiently.</p>
+            <p><strong>Developer:</strong> Robin Doak</p>
+            <p><i>Icons by</i> <a href="https://www.flaticon.com/authors/freepik" target="_blank">Freepik</a> 
+            <i>from</i> <a href="https://www.flaticon.com/" target="_blank">Flaticon</a></p>
+            <p>Special thanks to the open-source community for providing invaluable tools and libraries. Your contributions and innovations inspire continuous improvement.</p>
+        """)
 
-        layout = QVBoxLayout()
-        layout.addWidget(about_text)
-        layout.addStretch()
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(10)
-        self.setLayout(layout)
+        # Frame for the about content
+        card_frame = QFrame()
+        card_frame.setStyleSheet("""
+            QFrame {
+                background-color: #3c3c3c;
+                border: 1px solid #555555;
+                border-radius: 8px;
+            }
+        """)
+        card_layout = QVBoxLayout()
+        card_layout.setContentsMargins(20, 20, 20, 20)
+        card_layout.setSpacing(10)
+
+        # Scroll area
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll_widget = QWidget()
+        scroll_widget.setStyleSheet("background-color: #3c3c3c;")
+        scroll_layout = QVBoxLayout(scroll_widget)
+        scroll_layout.addWidget(about_label)
+        scroll_layout.setContentsMargins(0, 0, 0, 0)
+        scroll_layout.setSpacing(0)
+        scroll.setWidget(scroll_widget)
+        scroll.setStyleSheet("""
+            QScrollArea {
+                border: none;
+                background-color: #3c3c3c;
+            }
+            QScrollBar:vertical {
+                background: #3c3c3c;
+                width: 8px;
+                margin: 2px;
+            }
+            QScrollBar::handle:vertical {
+                background: #555555;
+                border-radius: 4px;
+            }
+            QScrollBar::handle:vertical:hover {
+                background: #777777;
+            }
+        """)
+
+        card_layout.addWidget(scroll)
+        card_frame.setLayout(card_layout)
+
+        main_layout.addLayout(title_layout)
+        main_layout.addWidget(divider)
+        main_layout.addWidget(card_frame)
+        main_layout.addStretch()
+
+        self.setLayout(main_layout)
+        # Ensure a solid background
+        self.setStyleSheet("background-color: #2b2b2b;")
+
+
 
 # ------------------------ Main Window ------------------------
 class MainWindow(QWidget):
