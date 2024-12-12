@@ -6,6 +6,8 @@ import re
 import json
 import time
 import threading
+import re
+import json
 from urllib.parse import urljoin, urlparse
 from urllib.robotparser import RobotFileParser
 from bs4 import BeautifulSoup
@@ -28,6 +30,7 @@ except ImportError:
 
 from playwright.sync_api import sync_playwright
 import qdarkstyle  # Added QDarkStyle
+from urllib.parse import urlparse, urlunparse
 
 SETTINGS_FILE = "settings.json"
 HISTORY_FILE = "history.json"
@@ -224,11 +227,14 @@ class WebDownloader:
         self.exclusions = set(exclusions) if exclusions else set()
         self.download_cache = set()
         self.ignore_https_errors = ignore_https_errors
-        self.max_file_size = max_file_size * 1024 * 1024
+        self.max_file_size = max_file_size * 1024 * 1024  # Convert MB to bytes
         self.download_structure = download_structure
         self.follow_external_links = follow_external_links
         self.ignore_mime_types = ignore_mime_types if ignore_mime_types else []
         self.stop_event = stop_event
+
+        # **Define the download_cache_file attribute**
+        self.download_cache_file = CACHE_FILE
 
         self.load_cache()
         self.executor = ThreadPoolExecutor(max_workers=self.concurrency)
@@ -237,28 +243,32 @@ class WebDownloader:
         self.resource_queue = []
 
     def load_cache(self):
-        if os.path.exists(CACHE_FILE):
+        if os.path.exists(self.download_cache_file):
             try:
-                with open(CACHE_FILE, 'r') as f:
+                with open(self.download_cache_file, 'r') as f:
                     data = json.load(f)
                     self.download_cache = set(data.get('downloaded', []))
-                self.log_callback("✅ Cache loaded.")
+                    self.failed_downloads = set(data.get('failed', []))
+                self.log_callback("✅ Download cache loaded.")
             except (json.JSONDecodeError, IOError) as e:
-                self.log_callback(f"❌ Failed to load cache: {e}")
+                self.log_callback(f"❌ Failed to load download cache: {e}")
                 self.download_cache = set()
+                self.failed_downloads = set()
         else:
-            self.save_cache()
+            self.download_cache = set()
+            self.failed_downloads = set()
 
     def save_cache(self):
         data = {
-            'downloaded': list(self.download_cache)
+            'downloaded': list(self.download_cache),
+            'failed': list(self.failed_downloads)
         }
         try:
-            with open(CACHE_FILE, 'w') as f:
+            with open(self.download_cache_file, 'w') as f:
                 json.dump(data, f, indent=4)
-            self.log_callback("✅ Cache saved.")
+            self.log_callback("✅ Download cache saved.")
         except IOError as e:
-            self.log_callback(f"❌ Failed to save cache: {e}")
+            self.log_callback(f"❌ Failed to save download cache: {e}")
 
     def pause(self):
         self.pause_event.clear()
@@ -293,6 +303,7 @@ class WebDownloader:
             self.log_callback(f"⚠️ Could not fetch robots.txt for {url}: {e}")
             return True
 
+
     def download_websites(self):
         try:
             if not os.path.exists(self.download_path):
@@ -312,7 +323,9 @@ class WebDownloader:
                     break
                 self._download_page_with_playwright(base_url, self.download_path, current_depth=0)
 
-            for resource in self.resource_queue:
+            # Use a set to ensure unique resources
+            unique_resources = set(self.resource_queue)
+            for resource in unique_resources:
                 if self.stop_event and self.stop_event.is_set():
                     break
                 self.executor.submit(self._download_resource, *resource)
@@ -333,6 +346,7 @@ class WebDownloader:
             if self.log_callback:
                 self.log_callback(f"❌ An error occurred: {e}")
             return False, f"❌ An error occurred: {e}"
+
 
     def _count_total_resources(self, url, current_depth):
         if self.stop_event and self.stop_event.is_set():
@@ -410,7 +424,7 @@ class WebDownloader:
             resources = self._parse_resources(soup, url)
             for resource_url in resources:
                 if resource_url not in self.download_cache:
-                    self.resource_queue.append((resource_url, path, url))
+                    self.resource_queue.append((resource_url, path, url))  # Ensure tuple format
 
             linked_pages = self._find_linked_pages(soup, url)
             for link in linked_pages:
@@ -423,6 +437,7 @@ class WebDownloader:
 
         except Exception as e:
             self.log_callback(f"❌ Failed to download {url} with Playwright: {e}")
+
 
     def _parse_css_resources(self, css_url):
         resources = []
@@ -450,6 +465,7 @@ class WebDownloader:
         return resources
 
 
+
     def _find_linked_pages(self, soup, base_url):
         links = []
         base_parsed = urlparse(base_url)
@@ -471,12 +487,26 @@ class WebDownloader:
 
     def is_valid_resource_url(self, url):
         parsed = urlparse(url)
-        if '%23' in parsed.path:
-            self.log_callback(f"🚫 Excluding resource URL with encoded fragment: {url}")
+        if parsed.scheme not in ['http', 'https']:
             return False
-        if parsed.scheme not in ['http', 'https'] or not bool(parsed.netloc):
+        if not parsed.netloc:
+            return False
+        # Exclude specific API endpoints or dynamic URLs
+        exclusion_patterns = [
+            r'/api/js/AuthenticationService\.Authenticate',
+            # Add more patterns as needed
+        ]
+        for pattern in exclusion_patterns:
+            if re.search(pattern, url):
+                return False
+        # Allow only specific file extensions
+        valid_extensions = ['.css', '.js', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.woff', '.woff2', '.ttf', '.eot', '.pdf', '.docx', '.xlsx', '.pptx']
+        if not any(parsed.path.lower().endswith(ext) for ext in valid_extensions):
             return False
         return True
+
+
+
 
     def _download_resource(self, url, path, page_url):
         if self.stop_event and self.stop_event.is_set():
@@ -486,6 +516,9 @@ class WebDownloader:
             if self.resource_downloaded_callback:
                 self.resource_downloaded_callback.emit(url, "ℹ️ Already Downloaded", self._get_relative_path(url))
             return
+        if url in self.failed_downloads:
+            self.log_callback(f"🚫 Resource previously failed: {url}")
+            return
         if not self._can_fetch(url):
             return
         try:
@@ -493,9 +526,13 @@ class WebDownloader:
             if self.stop_event and self.stop_event.is_set():
                 return
             attempt = 0
-            while attempt <= self.retries:
+            success = False
+            while attempt < self.retries:
                 try:
                     head_resp = self.session.head(url, timeout=self.timeout)
+                    if head_resp.status_code == 404:
+                        self.log_callback(f"🚫 Resource not found (404): {url}")
+                        break  # Do not retry on 404
                     mime_type = head_resp.headers.get('Content-Type', '')
                     if any(m in mime_type for m in self.ignore_mime_types):
                         self.log_callback(f"🚫 Skipping {url} due to ignored MIME type {mime_type}")
@@ -509,14 +546,16 @@ class WebDownloader:
                             if self.resource_downloaded_callback:
                                 self.resource_downloaded_callback.emit(url, "❌ Too Large", "")
                             return
+                    success = True
                     break
                 except requests.RequestException as e:
                     attempt += 1
-                    if attempt > self.retries:
-                        raise e
                     wait_time = 2 ** attempt
                     self.log_callback(f"⚠️ Retry {attempt}/{self.retries} for {url} after {wait_time} seconds.")
                     time.sleep(wait_time)
+
+            if not success:
+                raise requests.RequestException(f"Failed to download after {self.retries} attempts.")
 
             relative_path = self._get_relative_path(url)
             local_path = os.path.join(path, relative_path)
@@ -530,8 +569,7 @@ class WebDownloader:
             self.save_cache()
 
             if self.resource_downloaded_callback:
-                self.resource_downloaded_callback(url, "✅ Downloaded", local_path)
-
+                self.resource_downloaded_callback.emit(url, "✅ Downloaded", local_path)
 
             with self.lock:
                 self.downloaded_resources += 1
@@ -543,6 +581,12 @@ class WebDownloader:
             self.log_callback(f"❌ Failed to download resource {url}: {e}")
             if self.resource_downloaded_callback:
                 self.resource_downloaded_callback.emit(url, f"❌ Failed: {e}", "")
+            # Mark as failed to prevent future retries
+            self.failed_downloads.add(url)
+            self.save_cache()
+
+
+
 
     def _rewrite_html(self, page_url, resource_url, local_relative_path):
         if self.stop_event and self.stop_event.is_set():
@@ -586,14 +630,14 @@ class WebDownloader:
                     src = tag.get(attr)
                     if src:
                         parsed_src = urlparse(src)
-                        clean_src = parsed_src._replace(fragment='').geturl()
+                        clean_src = parsed_src._replace(fragment='', query='').geturl()
                         if clean_src == resource_url:
                             new_path = os.path.relpath(local_relative_path, os.path.dirname(local_page_path))
                             new_path = new_path.replace('\\', '/')
                             tag[attr] = new_path
             else:
                 tags = soup.find_all(['link', 'script', 'img', 'video', 'source', 'a'],
-                                     href=lambda x: x and x.startswith(resource_url))
+                                    href=lambda x: x and x.startswith(resource_url))
                 for tag in tags:
                     if 'href' in tag.attrs:
                         new_path = os.path.relpath(local_relative_path, os.path.dirname(local_page_path))
@@ -608,6 +652,7 @@ class WebDownloader:
             self.log_callback(f"🔄 Rewrote HTML links in {local_page_path}")
         except Exception as e:
             self.log_callback(f"❌ Failed to rewrite HTML for {page_url}: {e}")
+
 
     def _get_relative_path(self, url):
         parsed_url = urlparse(url)
@@ -646,92 +691,113 @@ class WebDownloader:
         if self.status_callback:
             self.status_callback(f"Downloaded {self.downloaded_resources} of {self.total_resources} resources.")
 
+
     def _parse_resources(self, soup, base_url):
-        resources = []
+        resources = set()
         if self.stop_event and self.stop_event.is_set():
+            self.log_callback("⏹️ Stopping resource parsing as stop event is set.")
             return resources
         rt = self.resource_types
+        self.log_callback(f"📄 Parsing resources for {base_url} with resource types: {rt}")
 
-        # For CSS
+        # CSS
         if 'css' in rt:
             for link in soup.find_all('link', rel='stylesheet'):
                 href = link.get('href')
                 if href:
                     full_url = urljoin(base_url, href)
-                    if self.is_valid_resource_url(full_url):
-                        resources.append(full_url)
-                        # If the CSS references other resources like @import or URL(),
-                        # they'll be handled in _parse_css_resources
+                    clean_url = self.clean_url(full_url)
+                    if self.is_valid_resource_url(clean_url):
+                        resources.add(clean_url)
+                        # Parse additional resources within CSS
+                        css_resources = self._parse_css_resources(clean_url)
+                        resources.update(css_resources)
 
-        # For JS
+        # JS
         if 'js' in rt:
             for script in soup.find_all('script', src=True):
                 src = script.get('src')
                 if src:
                     full_url = urljoin(base_url, src)
-                    if self.is_valid_resource_url(full_url):
-                        resources.append(full_url)
+                    clean_url = self.clean_url(full_url)
+                    if self.is_valid_resource_url(clean_url):
+                        resources.add(clean_url)
 
+        # Images
         if 'images' in rt:
             for img in soup.find_all('img', src=True):
                 src = img.get('src')
                 if src:
                     full_url = urljoin(base_url, src)
-                    parsed_url = urlparse(full_url)
-                    clean_url = parsed_url._replace(fragment='').geturl()
+                    clean_url = self.clean_url(full_url)
                     if self.is_valid_resource_url(clean_url):
-                        resources.append(clean_url)
+                        resources.add(clean_url)
 
+        # Fonts
         if 'fonts' in rt:
             for link in soup.find_all('link', rel=lambda x: x and 'font' in x.lower()):
                 href = link.get('href')
                 if href:
                     full_url = urljoin(base_url, href)
-                    parsed_url = urlparse(full_url)
-                    clean_url = parsed_url._replace(fragment='').geturl()
+                    clean_url = self.clean_url(full_url)
                     if self.is_valid_resource_url(clean_url):
-                        resources.append(clean_url)
+                        resources.add(clean_url)
 
+        # Videos
         if 'videos' in rt:
             for video in soup.find_all('video'):
                 src = video.get('src')
                 if src:
                     full_url = urljoin(base_url, src)
-                    parsed_url = urlparse(full_url)
-                    clean_url = parsed_url._replace(fragment='').geturl()
+                    clean_url = self.clean_url(full_url)
                     if self.is_valid_resource_url(clean_url):
-                        resources.append(clean_url)
+                        resources.add(clean_url)
                 for source in video.find_all('source', src=True):
                     source_src = source.get('src')
                     if source_src:
                         full_url = urljoin(base_url, source_src)
-                        parsed_url = urlparse(full_url)
-                        clean_url = parsed_url._replace(fragment='').geturl()
+                        clean_url = self.clean_url(full_url)
                         if self.is_valid_resource_url(clean_url):
-                            resources.append(clean_url)
+                            resources.add(clean_url)
 
+        # SVG
         if 'svg' in rt:
             for img in soup.find_all('img', src=True):
                 src = img.get('src')
                 if src and src.lower().endswith('.svg'):
                     full_url = urljoin(base_url, src)
-                    parsed_url = urlparse(full_url)
-                    clean_url = parsed_url._replace(fragment='').geturl()
+                    clean_url = self.clean_url(full_url)
                     if self.is_valid_resource_url(clean_url):
-                        resources.append(clean_url)
+                        resources.add(clean_url)
 
+        # Documents
         if 'documents' in rt:
             for a in soup.find_all('a', href=True):
                 href = a.get('href')
                 if href and any(href.lower().endswith(ext) for ext in ['.pdf', '.docx', '.xlsx', '.pptx']):
                     full_url = urljoin(base_url, href)
-                    parsed_url = urlparse(full_url)
-                    clean_url = parsed_url._replace(fragment='').geturl()
+                    clean_url = self.clean_url(full_url)
                     if self.is_valid_resource_url(clean_url):
-                        resources.append(clean_url)
+                        resources.add(clean_url)
 
-        self.log_callback(f"🔍 Total resources found on {base_url}: {len(resources)}")
+        self.log_callback(f"🔍 Total unique resources found on {base_url}: {len(resources)}")
+        for res in resources:
+            self.log_callback(f"🔗 Resource detected: {res}")
         return resources
+
+
+
+    def clean_url(self, url):
+        """
+        Removes fragment identifiers and queries from the URL.
+        """
+        parsed = urlparse(url)
+        clean_parsed = parsed._replace(fragment='', query='')
+        clean_url = urlunparse(clean_parsed)
+        return clean_url
+
+
+
 
 
 # ------------------------ Downloader Thread ------------------------
@@ -1078,28 +1144,34 @@ class HomeWidget(QWidget):
         buttons_layout.addWidget(self.resume_button)
         buttons_layout.addWidget(self.stop_button)
 
+        # Inside HomeWidget.init_ui()
+
         self.progress_bar = QProgressBar()
         self.progress_bar.setValue(0)
         self.progress_bar.setAlignment(Qt.AlignCenter)
         self.progress_bar.setFont(QFont("Segoe UI", 10))
         self.progress_bar.setFixedHeight(25)
+        self.progress_bar.setFormat("%p%")  # Display percentage
+        self.progress_bar.setTextVisible(True)  # Ensure text is visible
         self.progress_bar.setStyleSheet("""
             QProgressBar {
                 border: 1px solid #555555;
-                border-radius: 0px;
+                border-radius: 12px;  /* Rounded corners */
                 text-align: center;
                 background-color: #3c3c3c;
                 color: #ffffff;
             }
             QProgressBar::chunk {
-                background-color: #1e90ff;
+                background: qlineargradient(
+                    x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #1e90ff, stop:1 #63b8ff
+                );
                 width: 20px;
-            }
-            QProgressBar::chunk:hover {
-                background-color: #63b8ff;
+                border-radius: 12px;
             }
         """)
         self.progress_bar.hide()
+
 
         self.status_label = QLabel("Enter URLs and select a download path.")
         self.status_label.setFont(QFont("Segoe UI", 10))
