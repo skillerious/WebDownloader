@@ -6,7 +6,7 @@ HISTORY_FILE = "history.json"
 
 class SettingsManager:
     default_settings = {
-        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
+        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
         "timeout": 10,
         "retries": 3,
         "default_resource_types": {
@@ -21,7 +21,7 @@ class SettingsManager:
         },
         "max_depth": 2,
         "concurrency": 5,
-        "proxy": None,  # can be {"http": "...", "https": "..."}
+        "proxy": None,
         "robots_txt": False,
         "rate_limit": 0.1,
         "exclusions": [],
@@ -37,7 +37,7 @@ class SettingsManager:
         "enable_notifications": True,
         "show_toolbar": True,
         "download_after_crawl": False,
-        "include_subdomains": True, # NEW
+        "include_subdomains": True,
         "follow_external_links": False,
         "custom_headers": [],
         "basic_auth_user": "",
@@ -45,13 +45,7 @@ class SettingsManager:
         "schedule_download": False,
         "schedule_time": "00:00",
         "ignore_mime_types": [],
-        # NEW settings:
-        "auth_token": "",
-        "token_refresh_endpoint": "",
-        "remove_query_strings": False,
-        "max_pages": 0,
-        "max_resources": 0,
-        "max_images": 0
+        "dynamic_mode": "auto"
     }
 
     settings = {}
