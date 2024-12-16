@@ -1,3 +1,4 @@
+import sys
 from PyQt5.QtWidgets import (QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout,
                              QHBoxLayout, QFileDialog, QProgressBar, QMessageBox,
                              QTextEdit, QTableWidget, QTableWidgetItem, QCheckBox)
@@ -11,12 +12,13 @@ try:
     WEBENGINE_AVAILABLE = True
 except ImportError:
     WEBENGINE_AVAILABLE = False
+import threading
 
 class HomeWidget(QWidget):
     def __init__(self):
         super().__init__()
         self.downloader_thread = None
-        self.stop_event = threading.Event() if 'threading' in globals() else None
+        self.stop_event = threading.Event()
         self.schedule_timer = None
         self.preview_button = None
         self.open_folder_button = None
@@ -46,7 +48,7 @@ class HomeWidget(QWidget):
             QPushButton {
                 background-color: #1e90ff;
                 color: white;
-                border-radius: 0px;
+                border-radius: 8px;
             }
             QPushButton:hover {
                 background-color: #63b8ff;
@@ -64,7 +66,7 @@ class HomeWidget(QWidget):
             QPushButton {
                 background-color: #ffa500;
                 color: white;
-                border-radius: 0px;
+                border-radius: 8px;
             }
             QPushButton:hover {
                 background-color: #ffb733;
@@ -83,7 +85,7 @@ class HomeWidget(QWidget):
             QPushButton {
                 background-color: #32cd32;
                 color: white;
-                border-radius: 0px;
+                border-radius: 8px;
             }
             QPushButton:hover {
                 background-color: #45da45;
@@ -102,7 +104,7 @@ class HomeWidget(QWidget):
             QPushButton {
                 background-color: #ff4d4d;
                 color: white;
-                border-radius: 0px;
+                border-radius: 8px;
             }
             QPushButton:hover {
                 background-color: #ff6666;
@@ -364,6 +366,7 @@ class HomeWidget(QWidget):
         self.downloader_thread.status.connect(self.update_status)
         self.downloader_thread.log.connect(self.update_logs)
         self.downloader_thread.resource_downloaded.connect(self.update_resource_table)
+        self.downloader_thread.page_downloaded.connect(self.update_resource_table)
         self.downloader_thread.finished_download.connect(self.download_finished)
         self.downloader_thread.start()
 
@@ -442,7 +445,8 @@ class HomeWidget(QWidget):
         if success:
             QMessageBox.information(self, "Success", message)
         else:
-            QMessageBox.critical(self, "Error", message)
+            # If success is False, it might mean partial failure
+            QMessageBox.warning(self, "Completed with Errors", message)
         self.download_button.setEnabled(True)
         self.pause_button.setEnabled(False)
         self.resume_button.setEnabled(False)
@@ -450,7 +454,6 @@ class HomeWidget(QWidget):
         self.progress_bar.hide()
         self.status_label.setText("Download finished.")
 
-        # If PyQtWebEngine is available, add a preview button if last downloaded page exists
         if WEBENGINE_AVAILABLE:
             if self.resource_table.rowCount() > 0:
                 last_path = self.resource_table.item(self.resource_table.rowCount()-1, 2)
@@ -462,7 +465,7 @@ class HomeWidget(QWidget):
                             QPushButton {
                                 background-color: #1e90ff;
                                 color: white;
-                                border-radius: 0px;
+                                border-radius: 8px;
                             }
                             QPushButton:hover {
                                 background-color: #63b8ff;
@@ -474,7 +477,6 @@ class HomeWidget(QWidget):
                         self.preview_button.clicked.connect(lambda: self.preview_page(last_path.text()))
                         self.layout().addWidget(self.preview_button)
 
-        # Add "Open Download Folder" button
         if self.resource_table.rowCount() > 0:
             last_row = self.resource_table.rowCount() - 1
             path_item = self.resource_table.item(last_row, 2)
@@ -486,7 +488,7 @@ class HomeWidget(QWidget):
                         QPushButton {
                             background-color: #1e90ff;
                             color: white;
-                            border-radius: 0px;
+                            border-radius: 8px;
                         }
                         QPushButton:hover {
                             background-color: #63b8ff;

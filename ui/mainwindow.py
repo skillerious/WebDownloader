@@ -1,13 +1,13 @@
-import sys
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QFrame, QStackedWidget, QMessageBox, QLabel, QPushButton, QGraphicsOpacityEffect, QGraphicsDropShadowEffect
+from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QFrame, QStackedWidget, 
+                             QMessageBox, QLabel, QPushButton, QGraphicsOpacityEffect, QGraphicsDropShadowEffect)
 from PyQt5.QtCore import Qt, QPropertyAnimation, QEasingCurve, QPoint, QSize
 from PyQt5.QtGui import QIcon, QFont, QPixmap, QColor, QBrush
+import sys
 
 from ui.home import HomeWidget
 from ui.history import HistoryWidget
 from ui.settings import SettingsWidget
 from ui.about import AboutWidget
-from ui.imageripper import ImageRipperWidget
 
 class SidebarButton(QPushButton):
     def __init__(self, icon_path, text):
@@ -75,21 +75,13 @@ class TitleBar(QWidget):
 
     def init_ui(self):
         self.setFixedHeight(40)
-
-        # No border in the TitleBar itself now, just the gradient and shadow
         self.setStyleSheet("""
             QWidget {
-                background: qlineargradient(
-                    x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #3c4858,
-                    stop:0.5 #2c3e50,
-                    stop:1 #263445
-                );
+                background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #2c3e50, stop:1 #34495e);
             }
             QLabel {
                 color: #ecf0f1;
                 font: 14px "Segoe UI", sans-serif;
-                background-color: transparent;
             }
             QPushButton {
                 border: none;
@@ -100,19 +92,12 @@ class TitleBar(QWidget):
                 padding: 0;
             }
             QPushButton:hover {
-                background-color: #3b4f5f;
+                background-color: #34495e;
             }
             QPushButton:pressed {
-                background-color: #1e2d3a;
+                background-color: #2980b9;
             }
         """)
-
-        shadow = QGraphicsDropShadowEffect(self)
-        shadow.setBlurRadius(15)
-        shadow.setXOffset(0)
-        shadow.setYOffset(2)
-        shadow.setColor(QColor(0, 0, 0, 180))
-        self.setGraphicsEffect(shadow)
 
         self.app_icon = QLabel()
         app_pixmap = QPixmap("icons/app_icon.png").scaled(24, 24, Qt.KeepAspectRatio, Qt.SmoothTransformation)
@@ -122,50 +107,58 @@ class TitleBar(QWidget):
 
         self.title = QLabel("Web Downloader")
         self.title.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        self.title.setFont(QFont("Segoe UI", 14, QFont.Bold))
+        self.title.setStyleSheet("background-color: transparent;")
 
         self.btn_minimize = QPushButton()
         self.btn_minimize.setIcon(QIcon("icons/minimize.png"))
         self.btn_minimize.setToolTip("Minimize")
         self.btn_minimize.clicked.connect(self.minimize_window)
+        self._add_drop_shadow(self.btn_minimize)
 
         self.btn_maximize = QPushButton()
         self.btn_maximize.setIcon(QIcon("icons/maximize.png"))
         self.btn_maximize.setToolTip("Maximize")
         self.btn_maximize.clicked.connect(self.maximize_restore_window)
+        self._add_drop_shadow(self.btn_maximize)
 
         self.btn_close = QPushButton()
         self.btn_close.setIcon(QIcon("icons/close.png"))
         self.btn_close.setToolTip("Close")
         self.btn_close.clicked.connect(self.close_window)
+        self._add_drop_shadow(self.btn_close)
 
         h_layout = QHBoxLayout()
         h_layout.setContentsMargins(10, 0, 10, 0)
         h_layout.setSpacing(10)
 
-        h_layout.addWidget(self.app_icon, alignment=Qt.AlignVCenter)
-        h_layout.addWidget(self.title, alignment=Qt.AlignVCenter)
+        h_layout.addWidget(self.app_icon, alignment=Qt.AlignLeft | Qt.AlignVCenter)
+        h_layout.addWidget(self.title, alignment=Qt.AlignLeft | Qt.AlignVCenter)
         h_layout.addStretch()
-        h_layout.addWidget(self.btn_minimize, alignment=Qt.AlignVCenter)
-        h_layout.addWidget(self.btn_maximize, alignment=Qt.AlignVCenter)
-        h_layout.addWidget(self.btn_close, alignment=Qt.AlignVCenter)
+        h_layout.addWidget(self.btn_minimize, alignment=Qt.AlignRight | Qt.AlignVCenter)
+        h_layout.addWidget(self.btn_maximize, alignment=Qt.AlignRight | Qt.AlignVCenter)
+        h_layout.addWidget(self.btn_close, alignment=Qt.AlignRight | Qt.AlignVCenter)
 
         self.setLayout(h_layout)
 
+    def _add_drop_shadow(self, button):
+        shadow = QGraphicsDropShadowEffect()
+        shadow.setBlurRadius(10)
+        shadow.setOffset(0, 2)
+        shadow.setColor(QColor(0, 0, 0, 160))
+        button.setGraphicsEffect(shadow)
+
     def minimize_window(self):
-        if self.parent:
-            self.parent.showMinimized()
+        self.parent.showMinimized()
 
     def maximize_restore_window(self):
-        if self.parent:
-            if self.parent.isMaximized():
-                self.parent.showNormal()
-                self.btn_maximize.setIcon(QIcon("icons/maximize.png"))
-                self.btn_maximize.setToolTip("Maximize")
-            else:
-                self.parent.showMaximized()
-                self.btn_maximize.setIcon(QIcon("icons/restore.png"))
-                self.btn_maximize.setToolTip("Restore")
+        if self.parent.isMaximized():
+            self.parent.showNormal()
+            self.btn_maximize.setIcon(QIcon("icons/maximize.png"))
+            self.btn_maximize.setToolTip("Maximize")
+        else:
+            self.parent.showMaximized()
+            self.btn_maximize.setIcon(QIcon("icons/restore.png"))
+            self.btn_maximize.setToolTip("Restore")
 
     def close_window(self):
         choice = QMessageBox.question(self, 'Quit',
@@ -174,6 +167,8 @@ class TitleBar(QWidget):
 
         if choice == QMessageBox.Yes:
             sys.exit()
+        else:
+            pass
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
@@ -181,7 +176,7 @@ class TitleBar(QWidget):
             self.pressing = True
 
     def mouseMoveEvent(self, event):
-        if self.pressing and self.parent:
+        if self.pressing:
             self.parent.move(self.parent.pos() + event.globalPos() - self.start)
             self.start = event.globalPos()
 
@@ -191,9 +186,6 @@ class TitleBar(QWidget):
     def mouseDoubleClickEvent(self, event):
         if event.button() == Qt.LeftButton:
             self.maximize_restore_window()
-
-
-
 
 
 class MainWindow(QWidget):
@@ -212,10 +204,12 @@ class MainWindow(QWidget):
         self.title_bar = TitleBar(self)
         main_layout.addWidget(self.title_bar)
 
-        line = QFrame()
-        line.setFixedHeight(1)
-        line.setStyleSheet("background-color: #444444;")  # or any color you want
-        main_layout.addWidget(line)
+        # Add a separator line below the title bar
+        separator = QFrame()
+        separator.setFrameShape(QFrame.HLine)
+        separator.setFrameShadow(QFrame.Sunken)
+        separator.setStyleSheet("QFrame {background-color: #444444; border: none; height: 1px;}")
+        main_layout.addWidget(separator)
 
         content_layout = QHBoxLayout()
         content_layout.setContentsMargins(0, 0, 0, 0)
@@ -237,21 +231,18 @@ class MainWindow(QWidget):
         self.sidebar_layout.addWidget(self.logo)
 
         self.btn_home = SidebarButton("icons/home.png", "Home")
-        self.btn_images = SidebarButton("icons/images.png", "Images")
         self.btn_history = SidebarButton("icons/history.png", "History")
         self.btn_settings = SidebarButton("icons/settings.png", "Settings")
         self.btn_about = SidebarButton("icons/about.png", "About")
         self.btn_quit = SidebarButton("icons/quit.png", "Quit")
 
         self.btn_home.clicked.connect(lambda: self.switch_page(0))
-        self.btn_images.clicked.connect(lambda: self.switch_page(4))
         self.btn_history.clicked.connect(lambda: self.switch_page(1))
         self.btn_settings.clicked.connect(lambda: self.switch_page(2))
         self.btn_about.clicked.connect(lambda: self.switch_page(3))
         self.btn_quit.clicked.connect(self.close_application)
 
         self.sidebar_layout.addWidget(self.btn_home)
-        self.sidebar_layout.addWidget(self.btn_images)
         self.sidebar_layout.addWidget(self.btn_history)
         self.sidebar_layout.addWidget(self.btn_settings)
         self.sidebar_layout.addWidget(self.btn_about)
@@ -265,13 +256,11 @@ class MainWindow(QWidget):
         self.history = HistoryWidget()
         self.settings = SettingsWidget()
         self.about = AboutWidget()
-        self.imageripper = ImageRipperWidget()
 
-        self.stack.addWidget(self.home)        # index 0
-        self.stack.addWidget(self.history)     # index 1
-        self.stack.addWidget(self.settings)    # index 2
-        self.stack.addWidget(self.about)       # index 3
-        self.stack.addWidget(self.imageripper) # index 4
+        self.stack.addWidget(self.home)
+        self.stack.addWidget(self.history)
+        self.stack.addWidget(self.settings)
+        self.stack.addWidget(self.about)
 
         content_layout.addWidget(self.sidebar)
         content_layout.addWidget(self.stack)
@@ -302,7 +291,7 @@ class MainWindow(QWidget):
         self.fade_in()
 
     def highlight_button(self, index):
-        buttons = [self.btn_home, self.btn_history, self.btn_settings, self.btn_about, self.btn_images]
+        buttons = [self.btn_home, self.btn_history, self.btn_settings, self.btn_about]
         for i, button in enumerate(buttons):
             button.set_active(i == index)
 

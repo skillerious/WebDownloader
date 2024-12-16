@@ -161,7 +161,11 @@ class SettingsWidget(QWidget):
         ua_widget = QWidget()
         ua_widget.setLayout(ua_layout)
 
+        self.dynamic_mode_combobox = QComboBox()
+        self.dynamic_mode_combobox.addItems(["auto", "always", "never"])
+
         layout.addRow(QLabel("User-Agent:"), ua_widget)
+        layout.addRow(QLabel("Dynamic Mode:"), self.dynamic_mode_combobox)
         self.general_tab.setLayout(layout)
 
     def init_appearance_tab(self):
@@ -210,21 +214,6 @@ class SettingsWidget(QWidget):
 
         self.download_after_crawl_checkbox = QCheckBox("Download After Crawl")
 
-        # NEW fields for crawl limits and query removal:
-        self.max_pages_spinbox = QSpinBox()
-        self.max_pages_spinbox.setRange(0, 100000)  # 0 = no limit
-        self.max_pages_spinbox.setToolTip("Max number of pages to crawl (0 = no limit)")
-
-        self.max_resources_spinbox = QSpinBox()
-        self.max_resources_spinbox.setRange(0, 100000) # 0 = no limit
-        self.max_resources_spinbox.setToolTip("Max number of resources to download (0 = no limit)")
-
-        self.max_images_spinbox = QSpinBox()
-        self.max_images_spinbox.setRange(0, 100000)
-        self.max_images_spinbox.setToolTip("Max number of images to download (0 = no limit)")
-
-        self.remove_query_strings_checkbox = QCheckBox("Remove Query Strings from URLs")
-
         form.addRow(QLabel("Timeout (s):"), self.timeout_spinbox)
         form.addRow(QLabel("Retries:"), self.retries_spinbox)
         form.addRow(QLabel("Max Depth:"), self.depth_spinbox)
@@ -232,12 +221,6 @@ class SettingsWidget(QWidget):
         form.addRow(QLabel("Max File Size (MB):"), self.max_file_size_spinbox)
         form.addRow(QLabel("Download Structure:"), self.download_structure_combobox)
         form.addRow("", self.download_after_crawl_checkbox)
-
-        # Add the new fields:
-        form.addRow(QLabel("Max Pages:"), self.max_pages_spinbox)  # NEW
-        form.addRow(QLabel("Max Resources:"), self.max_resources_spinbox)  # NEW
-        form.addRow(QLabel("Max Images:"), self.max_images_spinbox)  # NEW
-        form.addRow("", self.remove_query_strings_checkbox)  # NEW
 
         resource_group = QGroupBox("Resource Types")
 
@@ -292,13 +275,6 @@ class SettingsWidget(QWidget):
 
         self.include_subdomains_checkbox = QCheckBox("Include Subdomains")
 
-        # NEW fields for auth_token and token_refresh_endpoint
-        self.auth_token_input = QLineEdit()
-        self.auth_token_input.setPlaceholderText("Bearer token...")
-
-        self.token_refresh_endpoint_input = QLineEdit()
-        self.token_refresh_endpoint_input.setPlaceholderText("URL for token refresh")
-
         form.addRow(QLabel("Proxy:"), self.proxy_address_input)
         form.addRow("", self.proxy_auth_checkbox)
         form.addRow(QLabel("Proxy Username:"), self.proxy_username_input)
@@ -307,11 +283,6 @@ class SettingsWidget(QWidget):
         form.addRow("", self.ignore_https_checkbox)
         form.addRow(QLabel("Rate Limit (s):"), self.rate_limit_spinbox)
         form.addRow("", self.include_subdomains_checkbox)
-
-        # Add authentication token fields
-        form.addRow(QLabel("Auth Token:"), self.auth_token_input) # NEW
-        form.addRow(QLabel("Token Refresh Endpoint:"), self.token_refresh_endpoint_input) # NEW
-
         self.network_tab.setLayout(form)
 
     def init_logging_tab(self):
@@ -449,6 +420,11 @@ class SettingsWidget(QWidget):
             self.custom_user_agent_input.setEnabled(True)
             self.custom_user_agent_input.setText(user_agent)
 
+        current_dynamic_mode = SettingsManager.get_setting('dynamic_mode')
+        index = self.dynamic_mode_combobox.findText(current_dynamic_mode)
+        if index >= 0:
+            self.dynamic_mode_combobox.setCurrentIndex(index)
+
         self.theme_combobox.setCurrentText(SettingsManager.get_setting('theme'))
         self.language_combobox.setCurrentText(SettingsManager.get_setting('language'))
 
@@ -463,9 +439,9 @@ class SettingsWidget(QWidget):
         proxy = SettingsManager.get_setting('proxy')
         if proxy and isinstance(proxy, dict):
             http_proxy = proxy.get('http', '')
-            if '://' in http_proxy:
-                from urllib.parse import urlparse
-                parsed = urlparse(http_proxy)
+            from urllib.parse import urlparse
+            parsed = urlparse(http_proxy)
+            if parsed.hostname and parsed.port:
                 host_port = f"{parsed.scheme}://{parsed.hostname}:{parsed.port}"
                 self.proxy_address_input.setText(host_port)
                 if parsed.username and parsed.password:
@@ -501,6 +477,7 @@ class SettingsWidget(QWidget):
         self.show_toolbar_checkbox.setChecked(SettingsManager.get_setting('show_toolbar'))
         self.download_after_crawl_checkbox.setChecked(SettingsManager.get_setting('download_after_crawl'))
         self.include_subdomains_checkbox.setChecked(SettingsManager.get_setting('include_subdomains'))
+
         self.follow_external_links_checkbox.setChecked(SettingsManager.get_setting('follow_external_links'))
         self.schedule_download_checkbox.setChecked(SettingsManager.get_setting('schedule_download'))
         schedule_time_str = SettingsManager.get_setting('schedule_time')
@@ -530,15 +507,6 @@ class SettingsWidget(QWidget):
         self.svg_checkbox.setChecked(default_resources.get('svg', False))
         self.documents_checkbox.setChecked(default_resources.get('documents', False))
 
-        # NEW: Load new settings
-        self.max_pages_spinbox.setValue(SettingsManager.get_setting('max_pages'))
-        self.max_resources_spinbox.setValue(SettingsManager.get_setting('max_resources'))
-        self.max_images_spinbox.setValue(SettingsManager.get_setting('max_images'))
-        self.remove_query_strings_checkbox.setChecked(SettingsManager.get_setting('remove_query_strings'))
-
-        self.auth_token_input.setText(SettingsManager.get_setting('auth_token'))
-        self.token_refresh_endpoint_input.setText(SettingsManager.get_setting('token_refresh_endpoint'))
-
     def save_settings(self):
         if self.user_agent_combobox.currentText() == "Custom":
             user_agent = self.custom_user_agent_input.text().strip()
@@ -547,6 +515,8 @@ class SettingsWidget(QWidget):
                 return
         else:
             user_agent = self.user_agent_combobox.currentText()
+
+        dynamic_mode = self.dynamic_mode_combobox.currentText()
 
         timeout = self.timeout_spinbox.value()
         retries = self.retries_spinbox.value()
@@ -593,7 +563,8 @@ class SettingsWidget(QWidget):
         enable_notifications = self.enable_notifications_checkbox.isChecked()
         show_toolbar = self.show_toolbar_checkbox.isChecked()
         download_after_crawl = self.download_after_crawl_checkbox.isChecked()
-        include_subdomains = self.include_subdomains_checkbox.isChecked()
+        include_subdomains = SettingsManager.get_setting('include_subdomains')
+
         follow_external_links = self.follow_external_links_checkbox.isChecked()
         schedule_download = self.schedule_download_checkbox.isChecked()
         schedule_time_str = self.schedule_time_edit.time().toString("HH:mm")
@@ -625,15 +596,6 @@ class SettingsWidget(QWidget):
             'documents': self.documents_checkbox.isChecked()
         }
 
-        # NEW: Get new settings
-        max_pages = self.max_pages_spinbox.value()
-        max_resources = self.max_resources_spinbox.value()
-        max_images = self.max_images_spinbox.value()
-        remove_query_strings = self.remove_query_strings_checkbox.isChecked()
-
-        auth_token = self.auth_token_input.text().strip()
-        token_refresh_endpoint = self.token_refresh_endpoint_input.text().strip()
-
         SettingsManager.set_setting('user_agent', user_agent)
         SettingsManager.set_setting('timeout', timeout)
         SettingsManager.set_setting('retries', retries)
@@ -664,14 +626,7 @@ class SettingsWidget(QWidget):
         SettingsManager.set_setting('basic_auth_pass', basic_auth_pass)
         SettingsManager.set_setting('ignore_mime_types', ignore_mime_types)
         SettingsManager.set_setting('default_resource_types', new_default_resources)
-
-        # NEW: Save new settings
-        SettingsManager.set_setting('max_pages', max_pages)
-        SettingsManager.set_setting('max_resources', max_resources)
-        SettingsManager.set_setting('max_images', max_images)
-        SettingsManager.set_setting('remove_query_strings', remove_query_strings)
-        SettingsManager.set_setting('auth_token', auth_token)
-        SettingsManager.set_setting('token_refresh_endpoint', token_refresh_endpoint)
+        SettingsManager.set_setting('dynamic_mode', dynamic_mode)
 
         QMessageBox.information(self, "Success", "✅ Settings saved successfully.")
 

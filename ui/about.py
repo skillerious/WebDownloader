@@ -1,8 +1,6 @@
-import sys
-from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QScrollArea,
-                             QApplication)
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QScrollArea, QTextBrowser, QSizePolicy
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtGui import QPixmap, QFont, QColor
 
 class AboutWidget(QWidget):
     def __init__(self):
@@ -10,31 +8,25 @@ class AboutWidget(QWidget):
         self.init_ui()
 
     def init_ui(self):
-        # Main layout for the about page
-        # The margins and spacing provide padding around the edges and between elements
         main_layout = QVBoxLayout()
+        # Adjust margins and spacing as desired
         main_layout.setContentsMargins(40, 40, 40, 40)
         main_layout.setSpacing(20)
 
-        # Title area (icon + title)
         title_layout = QHBoxLayout()
         title_layout.setSpacing(10)
 
         icon_label = QLabel()
-        # app_icon.png should have a transparent background already
         icon_pixmap = QPixmap("icons/app_icon.png").scaled(48, 48, Qt.KeepAspectRatio, Qt.SmoothTransformation)
         icon_label.setPixmap(icon_pixmap)
-        # Make the icon label background transparent
-        icon_label.setStyleSheet("background-color: rgba(0,0,0,0);")
 
         title_label = QLabel("About Web Downloader")
-        # Make the text transparent background and possibly the text slightly transparent if desired
         title_label.setStyleSheet("""
             QLabel {
-                background-color: rgba(0,0,0,0);
-                color: rgba(255,255,255,1.0); /* Fully opaque white text */
-                font-size: 24px;
+                font-size: 28px;
                 font-weight: bold;
+                color: #ffffff;
+                background: transparent;
             }
         """)
 
@@ -42,113 +34,104 @@ class AboutWidget(QWidget):
         title_layout.addWidget(title_label, 0, Qt.AlignCenter | Qt.AlignVCenter)
         title_layout.addStretch()
 
-        # Divider line
         divider = QFrame()
         divider.setFrameShape(QFrame.HLine)
         divider.setFrameShadow(QFrame.Sunken)
         divider.setStyleSheet("border: 1px solid #555555;")
 
-        # About content label (HTML text)
-        about_label = QLabel()
-        about_label.setWordWrap(True)
-        about_label.setAlignment(Qt.AlignTop)
+        about_label = QTextBrowser()
         about_label.setOpenExternalLinks(True)
+        # Make background transparent so text appears over card gradient
         about_label.setStyleSheet("""
-            QLabel {
-                background-color: transparent;
+            QTextBrowser {
                 color: #ffffff;
+                background: transparent; 
                 font-family: "Segoe UI";
-                font-size: 14px;
-            }
-            h2 {
-                margin-bottom: 5px;
-                font-size: 20px;
-                font-weight: bold;
-                color: #ffffff;
-            }
-            h3 {
-                margin-top: 15px;
                 font-size: 16px;
-                font-weight: bold;
-                color: #ffffff;
-            }
-            p {
-                line-height: 1.5;
-                margin-bottom: 10px;
-                color: #ffffff;
-            }
-            ul {
-                margin-left: 20px;
-            }
-            li {
-                margin-bottom: 5px;
+                border: none;
             }
             a {
                 color: #1e90ff;
-                text-decoration: none;
             }
             a:hover {
                 text-decoration: underline;
             }
-        """)
-        about_label.setText("""
-            <h2>Version 3.1</h2>
-            <p><b>Developed with Python and PyQt5.</b></p>
-            <p>This application allows you to download entire websites for offline use, handling HTML pages, images, CSS, JS, fonts, and more. 
-            It provides an intuitive interface, customizable settings, and detailed logs to help you manage and monitor your downloads efficiently.</p>
-
-            <h3>Features</h3>
-            <ul>
-                <li>Full website downloading (HTML, images, CSS, JS, and more)</li>
-                <li>Configurable crawl depth and resource filters</li>
-                <li>Proxy and authentication support</li>
-                <li>Advanced settings: max pages, max resources, ignore MIME types</li>
-                <li>Schedule downloads and export logs</li>
-                <li>Image Ripper mode to extract all images from a URL</li>
-            </ul>
-
-            <h3>Developer</h3>
-            <p><strong>Developer:</strong> Robin Doak<br>
-            <i>GitHub:</i> <a href="https://github.com/skillerious" target="_blank">https://github.com/skillerious</a></p>
-
-            <h3>Icons & Credits</h3>
-            <p><i>Icons by</i> <a href="https://www.flaticon.com/authors/freepik" target="_blank">Freepik</a> 
-            <i>from</i> <a href="https://www.flaticon.com/" target="_blank">Flaticon</a></p>
-
-            <h3>Contact</h3>
-            <p>If you have feedback, suggestions, or run into issues, please reach out via GitHub or file an issue on the project's repository.</p>
-
-            <h3>License</h3>
-            <p>This project is distributed under the MIT License. For details, see the <a href="https://opensource.org/licenses/MIT" target="_blank">MIT License</a>.<br>
-            Special thanks to the open-source community for providing invaluable tools and libraries. Your contributions and innovations inspire continuous improvement.</p>
-        """)
-
-        # Card frame to hold the about content
-        card_frame = QFrame()
-        card_frame.setStyleSheet("""
-            QFrame {
-                background-color: #3c3c3c;
-                border: 1px solid #555555;
-                border-radius: 8px;
+            h2 {
+                margin-bottom:5px; 
+                font-size:20px;
+            }
+            h3 {
+                font-size:18px;
+                margin: 10px 0 5px 0;
+            }
+            p, ul, li {
+                line-height: 1.4em;
+            }
+            ul {
+                margin-left: 20px;
             }
         """)
-        card_layout = QVBoxLayout()
-        card_layout.setContentsMargins(20, 20, 20, 20)
-        card_layout.setSpacing(10)
 
+        about_text = """
+            <h2>Version 3.1</h2>
+            <p><b>Developed with Python and PyQt5.</b></p>
+
+            <p>This application allows you to download entire websites for offline use, handling:</p>
+            <ul>
+                <li>HTML pages</li>
+                <li>Images and Videos</li>
+                <li>CSS, JavaScript, and Fonts</li>
+                <li>Documents (PDF, DOCX, etc.)</li>
+            </ul>
+            
+            <h3>Key Features</h3>
+            <p>
+            - Intuitive interface to start and manage downloads<br>
+            - Detailed logs and progress indicators<br>
+            - Support for multiple file types and deep links<br>
+            - Configurable concurrency, timeout, and proxy settings<br>
+            - Caching and conditional requests for efficiency
+            </p>
+            
+            <h3>Developer</h3>
+            <p><strong>Robin Doak</strong></p>
+            
+            <h3>Credits & Acknowledgements</h3>
+            <p>
+            Icons by <a href="https://www.flaticon.com/authors/freepik" target="_blank">Freepik</a> 
+            from <a href="https://www.flaticon.com/" target="_blank">Flaticon</a><br>
+            Special thanks to the open-source community for providing invaluable tools and libraries.<br>
+            Powered by <b>Python</b>, <b>PyQt5</b>, and <b>aiohttp</b>.
+            </p>
+            
+            <h3>Learn More</h3>
+            <p>
+            Visit our <a href="https://example.com/docs" target="_blank">Documentation</a> for detailed guides, 
+            or check out our <a href="https://example.com/support" target="_blank">Support Page</a> if you need assistance.
+            </p>
+            
+            <h3>Open Source</h3>
+            <p>
+            Contribute on <a href="https://github.com/example/WebDownloader" target="_blank">GitHub</a> and help improve this tool!
+            </p>
+        """
+        about_label.setHtml(about_text)
+
+        # Create a scroll area and widget that fills space
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll_widget = QWidget()
-        scroll_widget.setStyleSheet("background-color: #3c3c3c;")
+        scroll_widget.setStyleSheet("background: transparent;")
         scroll_layout = QVBoxLayout(scroll_widget)
         scroll_layout.addWidget(about_label)
         scroll_layout.setContentsMargins(0, 0, 0, 0)
         scroll_layout.setSpacing(0)
         scroll.setWidget(scroll_widget)
+
         scroll.setStyleSheet("""
             QScrollArea {
                 border: none;
-                background-color: #3c3c3c;
+                background: transparent;
             }
             QScrollBar:vertical {
                 background: #3c3c3c;
@@ -164,19 +147,31 @@ class AboutWidget(QWidget):
             }
         """)
 
+        card_frame = QFrame()
+        # Give the card a subtle gradient and make it fully expand
+        card_frame.setStyleSheet("""
+            QFrame {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #2c2c2c, stop:1 #3c3c3c);
+                border: 1px solid #555555;
+                border-radius: 8px;
+            }
+        """)
+        card_layout = QVBoxLayout()
+        card_layout.setContentsMargins(20, 20, 20, 20)
+        card_layout.setSpacing(10)
         card_layout.addWidget(scroll)
+
+        # Make sure the card expands
         card_frame.setLayout(card_layout)
+        card_frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         main_layout.addLayout(title_layout)
         main_layout.addWidget(divider)
         main_layout.addWidget(card_frame)
 
+
         self.setLayout(main_layout)
-        # Background of the entire widget
         self.setStyleSheet("background-color: #2b2b2b;")
 
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    w = AboutWidget()
-    w.show()
-    sys.exit(app.exec_())
+        # Ensure widget expands to fill space
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
